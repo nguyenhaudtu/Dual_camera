@@ -1,4 +1,4 @@
-name: Build Android PWA Package
+name: Package PWA Source
 
 on:
   push:
@@ -11,21 +11,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-
-      - name: Create output directory
-        run: mkdir -p ./output
-
-      - name: Download & Build Android APK via Bubblewrap CLI
+      - name: Create PWA Archive
         run: |
-          npm install -g @bubblewrap/cli
-          bubblewrap init --manifest=https://raw.githubusercontent.com/${{ github.repository }}/main/manifest.json --directory=./output --skip-validation || true
-          
-      - name: Upload APK Artifact
+          mkdir -p ./pwa-package
+          cp index.html ./pwa-package/
+          cp manifest.json ./pwa-package/
+
+      - name: Upload PWA Package Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: android-apk-package
-          path: ./output
+          name: dual-camera-pwa-source
+          path: ./pwa-package
