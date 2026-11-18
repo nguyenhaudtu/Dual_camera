@@ -16,10 +16,13 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Install PWABuilder CLI
-        run: npm install -g @pwabuilder/cli
-
       - name: Generate Android App Package
         run: |
-          pwabuilder package --manifest ./manifest.json --platforms android --output ./output
+          npx @pwabuilder/cli package --manifest ./manifest.json --platforms android --output ./output
         continue-on-error: true
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk-package
+          path: ./output
