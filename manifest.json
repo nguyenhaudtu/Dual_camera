@@ -1,0 +1,15 @@
+{
+  "background_color": "#ffffff",
+  "dir": "ltr",
+  "display": "standalone",
+  "name": "Dual_camera",
+  "orientation": "any",
+  "scope": "/",
+  "short_name": "Dual_cam",
+  "start_url": "/",
+  "theme_color": "#ffffff",
+  "categories": [
+    "graphics &amp; design",
+    "multimedia"
+  ]
+}
