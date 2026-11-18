@@ -1,0 +1,25 @@
+name: Build Android PWA Package
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install PWABuilder CLI
+        run: npm install -g @pwabuilder/cli
+
+      - name: Generate Android App Package
+        run: |
+          pwabuilder package --manifest ./manifest.json --platforms android --output ./output
+        continue-on-error: true
