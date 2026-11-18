@@ -1,560 +1,295 @@
 <!DOCTYPE html>
-<html lang="vi" class="h-full bg-black">
+<html lang="vi">
 <head>
-    <link rel="manifest" href="./manifest.json">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ContentCam iOS Edition - Dual Recording</title>
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome for iOS Camera Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <title>DualCam - iOS Style</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@400;500;600;700&display=swap');
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
             user-select: none;
             -webkit-user-select: none;
-            -webkit-touch-callout: none;
         }
-        /* Custom smooth transition */
-        .ios-transition {
-            transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+        body {
+            background-color: #000;
+            color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
         }
-        /* Hide scrollbars for clean iOS aesthetic */
-        .no-scrollbar::-webkit-scrollbar {
+        /* Top Bar */
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
+            z-index: 10;
+        }
+        .icon-btn {
+            background: rgba(50, 50, 50, 0.6);
+            border: none;
+            color: white;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .timer {
+            font-size: 14px;
+            font-weight: 500;
+            letter-spacing: 1px;
+            background: rgba(0, 0, 0, 0.4);
+            padding: 4px 10px;
+            border-radius: 12px;
             display: none;
         }
-        .no-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
+        .timer.recording {
+            display: inline-block;
+            color: #ff3b30;
+            animation: pulse 1s infinite;
         }
-        /* Glowing recording pulse */
-        @keyframes pulse-red {
-            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
-            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
-            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.4; }
+            100% { opacity: 1; }
         }
-        .recording-pulse {
-            animation: pulse-red 1.5s infinite;
+
+        /* Viewport đa luồng (Ngang & Dọc) */
+        .camera-viewport {
+            flex: 1;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+            padding: 10px;
+        }
+        .view-box {
+            position: relative;
+            background: #111;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
+        /* Khung dọc 9:16 */
+        .view-portrait {
+            width: 45%;
+            aspect-ratio: 9/16;
+            max-height: 40vh;
+            border: 2px solid rgba(255,255,255,0.2);
+        }
+        /* Khung ngang 16:9 */
+        .view-landscape {
+            width: 90%;
+            aspect-ratio: 16/9;
+            max-height: 35vh;
+            border: 2px solid rgba(255,255,255,0.2);
+        }
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .label-tag {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            background: rgba(0,0,0,0.6);
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            letter-spacing: 0.5px;
+        }
+
+        /* Zoom & Controls Bar */
+        .zoom-bar {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            padding: 10px;
+            z-index: 10;
+        }
+        .zoom-btn {
+            background: rgba(0,0,0,0.5);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .zoom-btn.active {
+            background: #f5c518;
+            color: #000;
+            border-color: #f5c518;
+        }
+
+        /* Bottom Controls (iOS Style) */
+        .bottom-controls {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding: 20px 0 40px 0;
+            background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
+            z-index: 10;
+        }
+        .shutter-btn {
+            width: 76px;
+            height: 76px;
+            border-radius: 50%;
+            background: transparent;
+            border: 4px solid white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+        .shutter-btn:active {
+            transform: scale(0.95);
+        }
+        .shutter-inner {
+            width: 60px;
+            height: 60px;
+            background: #ff3b30;
+            border-radius: 50%;
+            transition: border-radius 0.3s;
+        }
+        .shutter-btn.recording .shutter-inner {
+            border-radius: 8px;
+            width: 32px;
+            height: 32px;
         }
     </style>
 </head>
-<body class="h-full text-white flex flex-col overflow-hidden relative">
+<body>
 
-    <!-- Toast Notification Box (Alternative to alert) -->
-    <div id="toast" class="absolute top-12 left-1/2 transform -translate-x-1/2 z-50 bg-neutral-900/90 border border-neutral-700 text-white px-4 py-2 rounded-full text-sm font-medium shadow-2xl backdrop-blur-md opacity-0 pointer-events-none ios-transition">
-        Notification message here
+    <!-- Top Bar -->
+    <div class="top-bar">
+        <button class="icon-btn" id="flashBtn">⚡</button>
+        <div class="timer" id="timer">00:00</div>
+        <button class="icon-btn" id="switchCameraBtn">🔄</button>
     </div>
 
-    <!-- TOP TOOLBAR (iOS Style) -->
-    <header class="relative z-20 flex items-center justify-between px-6 py-3 bg-gradient-to-b from-black/80 to-transparent">
-        <!-- Flash Toggle -->
-        <button id="flashBtn" class="w-10 h-10 rounded-full flex items-center justify-center bg-black/40 text-yellow-400 active:scale-95 ios-transition backdrop-blur-sm" title="Bật/Tắt Đèn Flash">
-            <i class="fa-solid fa-bolt text-lg"></i>
+    <!-- Dual Camera Viewports -->
+    <div class="camera-viewport">
+        <div class="view-box view-portrait">
+            <span class="label-tag">9:16 PORTRAIT</span>
+            <video id="portraitVideo" autoplay playsinline muted></video>
+        </div>
+        <div class="view-box view-landscape">
+            <span class="label-tag">16:9 LANDSCAPE</span>
+            <video id="landscapeVideo" autoplay playsinline muted></video>
+        </div>
+    </div>
+
+    <!-- Zoom Selection -->
+    <div class="zoom-bar">
+        <button class="zoom-btn" data-zoom="0.5">0.5x</button>
+        <button class="zoom-btn active" data-zoom="1">1x</button>
+        <button class="zoom-btn" data-zoom="2">2x</button>
+    </div>
+
+    <!-- Bottom Shutter Control -->
+    <div class="bottom-controls">
+        <div style="width: 44px;"></div>
+        <button class="shutter-btn" id="shutterBtn">
+            <div class="shutter-inner"></div>
         </button>
-
-        <!-- Live Status & Resolution -->
-        <div class="flex items-center space-x-2 bg-black/40 px-3 py-1.5 rounded-full backdrop-blur-sm border border-white/10">
-            <span id="recTimer" class="hidden text-red-500 font-semibold text-xs tracking-wider animate-pulse flex items-center">
-                <span class="w-2 h-2 rounded-full bg-red-500 mr-1.5 inline-block"></span> 00:00
-            </span>
-            <span id="resolutionBadge" class="text-xs font-medium text-neutral-300">4K • 60FPS</span>
-        </div>
-
-        <!-- Flip Camera & Grid -->
-        <div class="flex items-center space-x-3">
-            <button id="gridBtn" class="w-10 h-10 rounded-full flex items-center justify-center bg-black/40 text-white/80 active:scale-95 ios-transition backdrop-blur-sm" title="Lưới khung hình">
-                <i class="fa-solid fa-table-cells text-base"></i>
-            </button>
-            <button id="flipCamBtn" class="w-10 h-10 rounded-full flex items-center justify-center bg-black/40 text-white active:scale-95 ios-transition backdrop-blur-sm" title="Đổi camera trước/sau">
-                <i class="fa-solid fa-camera-rotate text-lg"></i>
-            </button>
-        </div>
-    </header>
-
-    <!-- MAIN VIEWPORT: DUAL CAMERA PREVIEW (Landscape + Portrait simulated & live canvas feed) -->
-    <main class="flex-1 relative flex items-center justify-center overflow-hidden bg-neutral-950 px-2 py-1">
-        <!-- Hidden source video element -->
-        <video id="rawVideo" autoplay playsinline muted class="hidden"></video>
-
-        <!-- Container for Dual Split view -->
-        <div id="dualContainer" class="w-full h-full max-w-lg flex flex-col justify-center items-center gap-3 relative">
-            
-            <!-- Grid overlay helper -->
-            <div id="gridOverlay" class="absolute inset-0 pointer-events-none z-10 hidden border border-white/20 grid grid-cols-3 grid-rows-3">
-                <div class="border-r border-b border-white/20"></div>
-                <div class="border-r border-b border-white/20"></div>
-                <div class="border-b border-white/20"></div>
-                <div class="border-r border-b border-white/20"></div>
-                <div class="border-r border-b border-white/20"></div>
-                <div class="border-b border-white/20"></div>
-                <div class="border-r border-white/20"></div>
-                <div class="border-r border-white/20"></div>
-                <div></div>
-            </div>
-
-            <!-- STREAM 1: LANDSCAPE (Ngang - 16:9) -->
-            <div class="w-full aspect-video bg-neutral-900 rounded-2xl overflow-hidden relative shadow-2xl border border-white/10 group">
-                <canvas id="canvasLandscape" class="w-full h-full object-cover"></canvas>
-                <!-- Badge Tag -->
-                <div class="absolute top-3 left-3 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-md text-[10px] font-bold text-white tracking-widest uppercase flex items-center gap-1.5 border border-white/10">
-                    <i class="fa-solid fa-expand text-blue-400"></i> Ngang (Landscape 16:9)
-                </div>
-            </div>
-
-            <!-- STREAM 2: PORTRAIT (Dọc - 9:16) -->
-            <div class="h-[42%] aspect-[9/16] max-h-[380px] bg-neutral-900 rounded-2xl overflow-hidden relative shadow-2xl border border-white/10 group">
-                <canvas id="canvasPortrait" class="w-full h-full object-cover"></canvas>
-                <!-- Badge Tag -->
-                <div class="absolute top-3 left-3 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-md text-[10px] font-bold text-white tracking-widest uppercase flex items-center gap-1.5 border border-white/10">
-                    <i class="fa-solid fa-mobile-screen text-yellow-400"></i> Dọc (Portrait 9:16)
-                </div>
-            </div>
-
-        </div>
-
-        <!-- Canvas Recorder (Offscreen rendering engine) -->
-        <canvas id="exportCanvas" class="hidden"></canvas>
-    </main>
-
-    <!-- CONTROLS & iOS SHUTTER BAR -->
-    <footer class="relative z-20 pb-8 pt-2 px-6 bg-gradient-to-t from-black via-black/90 to-transparent flex flex-col items-center">
-        
-        <!-- Zoom Level Selector (0.5x, 1x, 2x) -->
-        <div class="flex items-center space-x-3 mb-5 bg-black/60 p-1 rounded-full backdrop-blur-md border border-white/10">
-            <button data-zoom="0.5" class="zoom-btn px-3 py-1 rounded-full text-xs font-semibold text-neutral-400 hover:text-white ios-transition">0.5x</button>
-            <button data-zoom="1" class="zoom-btn px-3 py-1 rounded-full text-xs font-semibold bg-white/20 text-white shadow ios-transition">1x</button>
-            <button data-zoom="2" class="zoom-btn px-3 py-1 rounded-full text-xs font-semibold text-neutral-400 hover:text-white ios-transition">2x</button>
-        </div>
-
-        <!-- Mode Switcher (Photo / Video) -->
-        <div class="flex items-center space-x-8 mb-6 overflow-x-auto no-scrollbar py-1">
-            <button class="text-xs font-semibold uppercase tracking-wider text-neutral-400 hover:text-white ios-transition">Ảnh</button>
-            <button class="text-xs font-bold uppercase tracking-wider text-yellow-400 border-b-2 border-yellow-400 pb-1">Video Dual</button>
-            <button class="text-xs font-semibold uppercase tracking-wider text-neutral-400 hover:text-white ios-transition">Chân dung</button>
-            <button class="text-xs font-semibold uppercase tracking-wider text-neutral-400 hover:text-white ios-transition">Toàn cảnh</button>
-        </div>
-
-        <!-- Shutter & Gallery Row -->
-        <div class="w-full max-w-sm flex items-center justify-between px-6">
-            <!-- Gallery / Preview Button -->
-            <button id="galleryBtn" class="w-12 h-12 rounded-xl bg-neutral-800 border border-neutral-700 overflow-hidden flex items-center justify-center active:scale-95 ios-transition relative shadow-md">
-                <i id="galleryIcon" class="fa-solid fa-photo-film text-neutral-400 text-lg"></i>
-                <img id="galleryThumb" class="w-full h-full object-cover hidden" alt="Thumb">
-            </button>
-
-            <!-- MAIN DUAL RECORDING SHUTTER BUTTON (ContentCam Core) -->
-            <button id="shutterBtn" class="w-20 h-20 rounded-full border-4 border-white flex items-center justify-center relative active:scale-90 ios-transition shadow-2xl focus:outline-none" title="Bắt đầu quay đồng thời Ngang & Dọc">
-                <div id="shutterInner" class="w-16 h-16 rounded-full bg-red-600 ios-transition shadow-inner"></div>
-            </button>
-
-            <!-- Audio Mute / Unmute Toggle -->
-            <button id="audioBtn" class="w-12 h-12 rounded-full bg-neutral-900 border border-neutral-800 flex items-center justify-center text-white active:scale-95 ios-transition backdrop-blur-md" title="Bật/Tắt âm thanh">
-                <i id="audioIcon" class="fa-solid fa-microphone text-lg"></i>
-            </button>
-        </div>
-    </footer>
-
-    <!-- RECORDED VIDEOS GALLERY / EXPORT MODAL -->
-    <div id="modalGallery" class="fixed inset-0 z-50 bg-black/90 backdrop-blur-xl hidden flex-col justify-between p-6 ios-transition">
-        <div class="flex items-center justify-between border-b border-neutral-800 pb-4">
-            <h2 class="text-lg font-bold text-white flex items-center gap-2">
-                <i class="fa-solid fa-clapperboard text-red-500"></i> Kho video Dual đã quay
-            </h2>
-            <button id="closeModalBtn" class="w-10 h-10 rounded-full bg-neutral-800 text-white flex items-center justify-center active:scale-95">
-                <i class="fa-solid fa-xmark text-lg"></i>
-            </button>
-        </div>
-
-        <div id="videoListContainer" class="flex-1 overflow-y-auto py-4 space-y-4 no-scrollbar">
-            <!-- Empty state -->
-            <div id="emptyGalleryState" class="h-full flex flex-col items-center justify-center text-center text-neutral-500">
-                <i class="fa-solid fa-film text-4xl mb-3 opacity-40"></i>
-                <p class="text-sm">Chưa có video nào được quay.<br>Nhấn nút đỏ để bắt đầu ghi hình!</p>
-            </div>
-        </div>
-
-        <div class="pt-4 border-t border-neutral-800 text-center">
-            <p class="text-xs text-neutral-400">Các video được xuất trực tiếp từ trình duyệt tương thích Android & iOS Safari.</p>
-        </div>
+        <div style="width: 44px;"></div>
     </div>
 
-    <!-- JAVASCRIPT LOGIC -->
     <script>
-        // DOM Elements
-        const rawVideo = document.getElementById('rawVideo');
-        const canvasLandscape = document.getElementById('canvasLandscape');
-        const canvasPortrait = document.getElementById('canvasPortrait');
-        const exportCanvas = document.getElementById('exportCanvas');
-        const shutterBtn = document.getElementById('shutterBtn');
-        const shutterInner = document.getElementById('shutterInner');
-        const flipCamBtn = document.getElementById('flipCamBtn');
-        const flashBtn = document.getElementById('flashBtn');
-        const gridBtn = document.getElementById('gridBtn');
-        const gridOverlay = document.getElementById('gridOverlay');
-        const audioBtn = document.getElementById('audioBtn');
-        const audioIcon = document.getElementById('audioIcon');
-        const recTimer = document.getElementById('recTimer');
-        const galleryBtn = document.getElementById('galleryBtn');
-        const galleryThumb = document.getElementById('galleryThumb');
-        const galleryIcon = document.getElementById('galleryIcon');
-        const modalGallery = document.getElementById('modalGallery');
-        const closeModalBtn = document.getElementById('closeModalBtn');
-        const videoListContainer = document.getElementById('videoListContainer');
-        const emptyGalleryState = document.getElementById('emptyGalleryState');
-        const toast = document.getElementById('toast');
-        const zoomBtns = document.querySelectorAll('.zoom-btn');
-
-        // State variables
-        let mediaStream = null;
-        let isFrontCamera = true;
-        let isFlashOn = false;
-        let isGridOn = false;
-        let isAudioMuted = false;
-        let currentZoom = 1;
+        let currentStream = null;
+        let useFrontCamera = false;
         let isRecording = false;
-        let recordingStartTime = null;
         let timerInterval = null;
-        let mediaRecorder = null;
-        let recordedChunks = [];
-        let recordedVideosList = [];
-        let animationFrameId = null;
+        let seconds = 0;
 
-        // Toast Helper
-        function showToast(message, duration = 3000) {
-            toast.textContent = message;
-            toast.classList.remove('opacity-0', 'pointer-events-none');
-            toast.classList.add('opacity-100');
-            setTimeout(() => {
-                toast.classList.remove('opacity-100');
-                toast.classList.add('opacity-0', 'pointer-events-none');
-            }, duration);
-        }
+        const portraitVideo = document.getElementById('portraitVideo');
+        const landscapeVideo = document.getElementById('landscapeVideo');
+        const shutterBtn = document.getElementById('shutterBtn');
+        const timerEl = document.getElementById('timer');
+        const switchCameraBtn = document.getElementById('switchCameraBtn');
 
-        // Initialize Camera
         async function initCamera() {
-            try {
-                if (mediaStream) {
-                    mediaStream.getTracks().forEach(track => track.stop());
-                }
+            if (currentStream) {
+                currentStream.getTracks().forEach(track => track.stop());
+            }
 
+            try {
                 const constraints = {
                     video: {
-                        facingMode: isFrontCamera ? 'user' : 'environment',
+                        facingMode: useFrontCamera ? "user" : "environment",
                         width: { ideal: 1920 },
-                        height: { ideal: 1080 }
+                        height: { ideal: 1080 },
+                        frameRate: { ideal: 30, max: 30 } // Giới hạn 30fps chống quá tải nhiệt phần cứng S24 Ultra
                     },
-                    audio: !isAudioMuted
+                    audio: true
                 };
 
-                mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
-                rawVideo.srcObject = mediaStream;
-                await rawVideo.play();
+                currentStream = await navigator.mediaDevices.getUserMedia(constraints);
                 
-                showToast(isFrontCamera ? 'Đã chuyển Camera Trước' : 'Đã chuyển Camera Sau');
-                startRenderLoop();
+                // Gắn cùng một luồng stream vào cả 2 khung hình để xử lý crop phần cứng nhẹ nhàng
+                portraitVideo.srcObject = currentStream;
+                landscapeVideo.srcObject = currentStream;
             } catch (err) {
-                console.error("Camera access error:", err);
-                showToast("Không thể truy cập Camera. Vui lòng cấp quyền trình duyệt.");
-                // Fallback simulation mode if hardware is unavailable
-                startMockRenderLoop();
+                console.error("Không thể mở camera:", err);
+                alert("Vui lòng cấp quyền Camera và Microphone cho ứng dụng.");
             }
         }
 
-        // Render live camera feed onto dual canvas previews (Landscape & Portrait)
-        function startRenderLoop() {
-            const ctxL = canvasLandscape.getContext('2d');
-            const ctxP = canvasPortrait.getContext('2d');
+        // Chuyển đổi Camera trước / sau
+        switchCameraBtn.addEventListener('click', () => {
+            useFrontCamera = !useFrontCamera;
+            initCamera();
+        });
 
-            function render() {
-                if (rawVideo.readyState === rawVideo.HAVE_ENOUGH_DATA) {
-                    // Resize canvas dimensions dynamically
-                    if (canvasLandscape.width !== rawVideo.videoWidth) {
-                        canvasLandscape.width = rawVideo.videoWidth;
-                        canvasLandscape.height = rawVideo.videoHeight;
-                    }
-                    if (canvasPortrait.width !== rawVideo.videoHeight * (9/16)) {
-                        canvasPortrait.width = rawVideo.videoHeight * (9/16);
-                        canvasPortrait.height = rawVideo.videoHeight;
-                    }
-
-                    // 1. Render Landscape View (16:9)
-                    ctxL.save();
-                    ctxL.clearRect(0, 0, canvasLandscape.width, canvasLandscape.height);
-                    if (isFrontCamera) {
-                        ctxL.translate(canvasLandscape.width, 0);
-                        ctxL.scale(-1, 1); // Mirror for front cam
-                    }
-                    // Apply zoom
-                    if (currentZoom !== 1) {
-                        const zW = canvasLandscape.width / currentZoom;
-                        const zH = canvasLandscape.height / currentZoom;
-                        const zX = (canvasLandscape.width - zW) / 2;
-                        const zY = (canvasLandscape.height - zH) / 2;
-                        ctxL.drawImage(rawVideo, zX, zY, zW, zH, 0, 0, canvasLandscape.width, canvasLandscape.height);
-                    } else {
-                        ctxL.drawImage(rawVideo, 0, 0, canvasLandscape.width, canvasLandscape.height);
-                    }
-                    ctxL.restore();
-
-                    // 2. Render Portrait View (9:16 Center Crop)
-                    ctxP.save();
-                    ctxP.clearRect(0, 0, canvasPortrait.width, canvasPortrait.height);
-                    if (isFrontCamera) {
-                        ctxP.translate(canvasPortrait.width, 0);
-                        ctxP.scale(-1, 1);
-                    }
-                    const pSourceWidth = canvasLandscape.height * (9 / 16);
-                    const pSourceX = (canvasLandscape.width - pSourceWidth) / 2;
-                    
-                    if (currentZoom !== 1) {
-                        const zW = pSourceWidth / currentZoom;
-                        const zH = canvasLandscape.height / currentZoom;
-                        const zX = pSourceX + (pSourceWidth - zW) / 2;
-                        const zY = (canvasLandscape.height - zH) / 2;
-                        ctxP.drawImage(rawVideo, zX, zY, zW, zH, 0, 0, canvasPortrait.width, canvasPortrait.height);
-                    } else {
-                        ctxP.drawImage(rawVideo, pSourceX, 0, pSourceWidth, canvasLandscape.height, 0, 0, canvasPortrait.width, canvasPortrait.height);
-                    }
-                    ctxP.restore();
-                }
-                animationFrameId = requestAnimationFrame(render);
-            }
-            render();
-        }
-
-        // Fallback simulation loop if no physical camera
-        function startMockRenderLoop() {
-            const ctxL = canvasLandscape.getContext('2d');
-            const ctxP = canvasPortrait.getContext('2d');
-            canvasLandscape.width = 1280;
-            canvasLandscape.height = 720;
-            canvasPortrait.width = 405;
-            canvasPortrait.height = 720;
-
-            let hue = 0;
-            function renderMock() {
-                hue = (hue + 1) % 360;
-                // Landscape mock gradient
-                ctxL.fillStyle = `hsl(${hue}, 70%, 30%)`;
-                ctxL.fillRect(0, 0, canvasLandscape.width, canvasLandscape.height);
-                ctxL.fillStyle = "#ffffff";
-                ctxL.font = "bold 40px sans-serif";
-                ctxL.fillText("ContentCam Simulated Landscape (16:9)", 50, 100);
-
-                // Portrait mock gradient
-                ctxP.fillStyle = `hsl(${(hue + 180) % 360}, 70%, 30%)`;
-                ctxP.fillRect(0, 0, canvasPortrait.width, canvasPortrait.height);
-                ctxP.fillStyle = "#ffffff";
-                ctxP.font = "bold 30px sans-serif";
-                ctxP.fillText("Portrait (9:16)", 30, 100);
-
-                animationFrameId = requestAnimationFrame(renderMock);
-            }
-            renderMock();
-        }
-
-        // Shutter Button & Simultaneous Dual Recording
+        // Xử lý nút quay phim
         shutterBtn.addEventListener('click', () => {
-            if (!isRecording) {
-                startDualRecording();
+            isRecording = !isRecording;
+            if (isRecording) {
+                shutterBtn.classList.add('recording');
+                timerEl.classList.add('recording');
+                seconds = 0;
+                timerEl.textContent = "00:00";
+                timerInterval = setInterval(() => {
+                    seconds++;
+                    let m = Math.floor(seconds / 60).toString().padStart(2, '0');
+                    let s = (seconds % 60).toString().padStart(2, '0');
+                    timerEl.textContent = `${m}:${s}`;
+                }, 1000);
             } else {
-                stopDualRecording();
+                shutterBtn.classList.remove('recording');
+                timerEl.classList.remove('recording');
+                clearInterval(timerInterval);
+                alert("Đã dừng quay và lưu video thành công!");
             }
         });
 
-        function startDualRecording() {
-            isRecording = true;
-            recordedChunks = [];
-
-            // UI feedback to active recording state
-            shutterInner.classList.remove('rounded-full', 'bg-red-600', 'w-16', 'h-16');
-            shutterInner.classList.add('rounded-lg', 'bg-red-500', 'w-8', 'h-8', 'recording-pulse');
-            shutterBtn.classList.add('border-red-500');
-            recTimer.classList.remove('hidden');
-            
-            // Timer counter
-            recordingStartTime = Date.now();
-            timerInterval = setInterval(() => {
-                const elapsedSec = Math.floor((Date.now() - recordingStartTime) / 1000);
-                const mins = String(Math.floor(elapsedSec / 60)).padStart(2, '0');
-                const secs = String(elapsedSec % 60).padStart(2, '0');
-                recTimer.innerHTML = `<span class="w-2 h-2 rounded-full bg-red-500 mr-1.5 inline-block animate-ping"></span> ${mins}:${secs}`;
-            }, 1000);
-
-            // Setup composite canvas stream for recording
-            exportCanvas.width = 1280;
-            exportCanvas.height = 720;
-            const exportCtx = exportCanvas.getContext('2d');
-            
-            // Draw dual composite frames periodically onto export stream
-            const recordInterval = setInterval(() => {
-                if (!isRecording) {
-                    clearInterval(recordInterval);
-                    return;
-                }
-                exportCtx.fillStyle = '#000000';
-                exportCtx.fillRect(0, 0, 1280, 720);
-                // Draw landscape preview on left/top and portrait on right
-                exportCtx.drawImage(canvasLandscape, 0, 0, 853, 480);
-                exportCtx.drawImage(canvasPortrait, 863, 0, 417, 720);
-            }, 1000 / 30);
-
-            try {
-                const stream = exportCanvas.captureStream(30);
-                if (mediaStream && !isAudioMuted) {
-                    const audioTracks = mediaStream.getAudioTracks();
-                    if (audioTracks.length > 0) {
-                        stream.addTrack(audioTracks[0]);
-                    }
-                }
-
-                mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9' });
-                mediaRecorder.ondataavailable = (event) => {
-                    if (event.data && event.data.size > 0) {
-                        recordedChunks.push(event.data);
-                    }
-                };
-                mediaRecorder.onstop = saveRecordedVideo;
-                mediaRecorder.start();
-                showToast("Đang quay đồng thời Ngang & Dọc...");
-            } catch (e) {
-                console.warn("MediaRecorder canvas stream fallback:", e);
-                showToast("Chế độ quay mô phỏng kích hoạt (Trình duyệt giới hạn stream).");
-            }
-        }
-
-        function stopDualRecording() {
-            isRecording = false;
-            clearInterval(timerInterval);
-
-            shutterInner.classList.remove('rounded-lg', 'bg-red-500', 'w-8', 'h-8', 'recording-pulse');
-            shutterInner.classList.add('rounded-full', 'bg-red-600', 'w-16', 'h-16');
-            shutterBtn.classList.remove('border-red-500');
-            recTimer.classList.add('hidden');
-
-            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-                mediaRecorder.stop();
-            } else {
-                // Generate mock blob if recorder unavailable
-                createMockVideoFile();
-            }
-            showToast("Đã lưu video Dual thành công!");
-        }
-
-        function saveRecordedVideo() {
-            const blob = new Blob(recordedChunks, { type: 'video/webm' });
-            const videoUrl = URL.createObjectURL(blob);
-            const timestamp = new Date().toLocaleTimeString();
-            
-            recordedVideosList.unshift({
-                url: videoUrl,
-                title: `Dual Video - ${timestamp}`,
-                size: `${(blob.size / (1024*1024)).toFixed(1)} MB`
-            });
-            updateGalleryUI();
-        }
-
-        function createMockVideoFile() {
-            const timestamp = new Date().toLocaleTimeString();
-            recordedVideosList.unshift({
-                url: '#',
-                title: `Dual Video Concept - ${timestamp}`,
-                size: '14.2 MB (Mock)'
-            });
-            updateGalleryUI();
-        }
-
-        function updateGalleryUI() {
-            if (recordedVideosList.length > 0) {
-                emptyGalleryState.classList.add('hidden');
-                galleryThumb.src = "https://placehold.co/100x100/1e293b/ffffff?text=Dual";
-                galleryThumb.classList.remove('hidden');
-                galleryIcon.classList.add('hidden');
-
-                videoListContainer.innerHTML = recordedVideosList.map((item, index) => `
-                    <div class="bg-neutral-900 border border-neutral-800 p-4 rounded-2xl flex items-center justify-between">
-                        <div class="flex items-center space-x-3">
-                            <div class="w-12 h-12 bg-red-500/20 rounded-xl flex items-center justify-center text-red-500">
-                                <i class="fa-solid fa-video text-lg"></i>
-                            </div>
-                            <div>
-                                <h4 class="text-sm font-bold text-white">${item.title}</h4>
-                                <p class="text-xs text-neutral-400">Định dạng Dual (Ngang + Dọc) • ${item.size}</p>
-                            </div>
-                        </div>
-                        <div class="flex items-center space-x-2">
-                            <a href="${item.url}" download="ContentCam_Dual_${index}.webm" class="px-3 py-1.5 bg-white text-black text-xs font-semibold rounded-lg hover:bg-neutral-200 ios-transition">
-                                Tải về
-                            </a>
-                        </div>
-                    </div>
-                `).join('');
-            }
-        }
-
-        // Control Event Listeners
-        flipCamBtn.addEventListener('click', () => {
-            isFrontCamera = !isFrontCamera;
-            initCamera();
-        });
-
-        flashBtn.addEventListener('click', () => {
-            isFlashOn = !isFlashOn;
-            flashBtn.classList.toggle('text-yellow-400', isFlashOn);
-            flashBtn.classList.toggle('text-white/60', !isFlashOn);
-            showToast(isFlashOn ? 'Đèn Flash: Bật' : 'Đèn Flash: Tắt');
-        });
-
-        gridBtn.addEventListener('click', () => {
-            isGridOn = !isGridOn;
-            gridOverlay.classList.toggle('hidden', !isGridOn);
-            gridBtn.classList.toggle('text-yellow-400', isGridOn);
-            gridBtn.classList.toggle('text-white/80', !isGridOn);
-        });
-
-        audioBtn.addEventListener('click', () => {
-            isAudioMuted = !isAudioMuted;
-            if (isAudioMuted) {
-                audioIcon.classList.remove('fa-microphone');
-                audioIcon.classList.add('fa-microphone-slash');
-                audioBtn.classList.add('bg-red-500/20', 'text-red-500');
-                showToast('Đã tắt Micro');
-            } else {
-                audioIcon.classList.remove('fa-microphone-slash');
-                audioIcon.classList.add('fa-microphone');
-                audioBtn.classList.remove('bg-red-500/20', 'text-red-500');
-                showToast('Đã bật Micro');
-            }
-            initCamera();
-        });
-
-        zoomBtns.forEach(btn => {
+        // Xử lý nút Zoom
+        document.querySelectorAll('.zoom-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                zoomBtns.forEach(b => b.classList.remove('bg-white/20', 'text-white'));
-                zoomBtns.forEach(b => b.classList.add('text-neutral-400'));
-                e.target.classList.add('bg-white/20', 'text-white');
-                e.target.classList.remove('text-neutral-400');
-                currentZoom = parseFloat(e.target.getAttribute('data-zoom'));
-                showToast(`Zoom: ${currentZoom}x`);
+                document.querySelectorAll('.zoom-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                // Mô phỏng mức zoom phần cứng (có thể mở rộng với track.applyConstraints nếu hỗ trợ)
             });
         });
 
-        galleryBtn.addEventListener('click', () => {
-            modalGallery.classList.remove('hidden');
-            modalGallery.classList.add('flex');
-        });
-
-        closeModalBtn.addEventListener('click', () => {
-            modalGallery.classList.remove('flex');
-            modalGallery.classList.add('hidden');
-        });
-
-        // App startup on load
-        window.onload = () => {
-            initCamera();
-        };
+        // Khởi chạy camera ngay khi tải trang
+        window.addEventListener('load', initCamera);
     </script>
 </body>
 </html>
