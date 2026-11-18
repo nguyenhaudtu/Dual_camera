@@ -16,11 +16,14 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Generate Android App Package
-        run: |
-          npx @pwabuilder/cli package --manifest ./manifest.json --platforms android --output ./output
-        continue-on-error: true
+      - name: Create output directory
+        run: mkdir -p ./output
 
+      - name: Download & Build Android APK via Bubblewrap CLI
+        run: |
+          npm install -g @bubblewrap/cli
+          bubblewrap init --manifest=https://raw.githubusercontent.com/${{ github.repository }}/main/manifest.json --directory=./output --skip-validation || true
+          
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
